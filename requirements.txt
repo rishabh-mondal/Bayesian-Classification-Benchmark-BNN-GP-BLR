@@ -4,6 +4,7 @@ matplotlib==3.8.1
 streamlit
 torch
 pandas
+GPy
 torchmetrics
 git+https://github.com/AdamCobb/hamiltorch.git
 
