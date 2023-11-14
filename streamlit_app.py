@@ -245,6 +245,8 @@ for w in net.parameters():
     tau_list.append(tau)
 tau_list = torch.tensor(tau_list)
 
+hamiltorch.set_random_seed(seed)
+
 params_init = hamiltorch.util.flatten(net)
 
 step_size = 0.1
@@ -401,95 +403,95 @@ st.subheader("Mean and Variance/Uncertainty Plot: Bayesian Logistic Regression")
 st.pyplot(fig)
 
 
-# n_samples = 5
+n_samples = 3
 
-# n_grid = 200
-# lims = 4
-# tot_itr = 6
-# twod_grid = torch.tensor(
-#     np.meshgrid(np.linspace(-lims, lims, n_grid), np.linspace(-lims, lims, n_grid))
-# ).float()
-# y_preds = []
-# acc = []
-# acc = torch.zeros(int((tot_itr)))
+n_grid = 200
+lims = 4
+tot_itr = 6
+twod_grid = torch.tensor(
+    np.meshgrid(np.linspace(-lims, lims, n_grid), np.linspace(-lims, lims, n_grid))
+).float()
+y_preds = []
+acc = []
+acc = torch.zeros(int((tot_itr)))
 
-# for i in range(n_samples):
-#     m = GPy.models.GPClassification(X_train.detach().numpy(), y_train.detach().numpy())
-#     out_pred = m.predict(X_test.cpu().numpy())
-#     pred = out_pred[0].flatten() > 0.5
-#     acc[0] = (torch.tensor(pred) == y_test.flatten()).sum().float() / y_test.shape[0]
-#     for itr in range(1, tot_itr):
-#         m.optimize(
-#             "bfgs", max_iters=10
-#         )  # first runs EP and then optimizes the kernel parameters
-#         print("iteration:", itr)
-#         print(m)
-#         print("")
-#         out_pred = m.predict(X_test.cpu().numpy())
-#         pred = out_pred[0].flatten() > 0.5
-#         acc[itr] = (
-#             torch.tensor(pred) == y_test.flatten()
-#         ).sum().float() / y_test.shape[0]
+for i in range(n_samples):
+    m = GPy.models.GPClassification(X_train.detach().numpy(), y_train.detach().numpy())
+    out_pred = m.predict(X_test.cpu().numpy())
+    pred = out_pred[0].flatten() > 0.5
+    acc[0] = (torch.tensor(pred) == y_test.flatten()).sum().float() / y_test.shape[0]
+    for itr in range(1, tot_itr):
+        m.optimize(
+            "bfgs", max_iters=10
+        )  # first runs EP and then optimizes the kernel parameters
+        print("iteration:", itr)
+        print(m)
+        print("")
+        out_pred = m.predict(X_test.cpu().numpy())
+        pred = out_pred[0].flatten() > 0.5
+        acc[itr] = (
+            torch.tensor(pred) == y_test.flatten()
+        ).sum().float() / y_test.shape[0]
 
-#     simY, simMse = m.predict(
-#         twod_grid.view(2, -1).T.detach().numpy()
-#     )  # (twod_grid.view(2, -1).T)
-#     y_preds.append(simY)
+    simY, simMse = m.predict(
+        twod_grid.view(2, -1).T.detach().numpy()
+    )  # (twod_grid.view(2, -1).T)
+    y_preds.append(simY)
 
-# plt.figure(figsize=(10, 5))
-# plt.plot(acc, label="Accuracy")
-# plt.grid()
-# plt.xlabel("Iteration number")
-# plt.ylabel("Sample accuracy")
-# plt.tick_params(labelsize=15)
-# plt.legend()
-# st.pyplot(plt)
+plt.figure(figsize=(10, 5))
+plt.plot(acc, label="Accuracy")
+plt.grid()
+plt.xlabel("Iteration number")
+plt.ylabel("Sample accuracy")
+plt.tick_params(labelsize=15)
+plt.legend()
+st.pyplot(plt)
 
-# probs = 1 - np.stack(y_preds).mean(axis=0).reshape(n_grid, n_grid)
+probs = 1 - np.stack(y_preds).mean(axis=0).reshape(n_grid, n_grid)
 
 
-# fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 
-# # Plot the first subplot
-# axs[0].contourf(
-#     twod_grid[0].cpu().numpy(),
-#     twod_grid[1].cpu().numpy(),
-#     probs.cpu().numpy(),
-#     cmap="bwr",
-#     alpha=0.5,
-# )
-# scatter1 = axs[0].scatter(
-#     X_test[:, 0].cpu().numpy(),
-#     X_test[:, 1].cpu().numpy(),
-#     c=y_test.cpu().numpy(),
-#     cmap="bwr",
-#     alpha=0.5,
-# )
-# axs[0].set_xlabel("Feature 1")
-# axs[0].set_ylabel("Feature 2")
-# axs[0].set_title("Gaussian Processes: Mean value prediction")
-# axs[0].legend(handles=scatter1.legend_elements()[0], labels=["Class 1", "Class 0"])
+# Plot the first subplot
+axs[0].contourf(
+    twod_grid[0].cpu().numpy(),
+    twod_grid[1].cpu().numpy(),
+    probs.cpu().numpy(),
+    cmap="bwr",
+    alpha=0.5,
+)
+scatter1 = axs[0].scatter(
+    X_test[:, 0].cpu().numpy(),
+    X_test[:, 1].cpu().numpy(),
+    c=y_test.cpu().numpy(),
+    cmap="bwr",
+    alpha=0.5,
+)
+axs[0].set_xlabel("Feature 1")
+axs[0].set_ylabel("Feature 2")
+axs[0].set_title("Gaussian Processes: Mean value prediction")
+axs[0].legend(handles=scatter1.legend_elements()[0], labels=["Class 1", "Class 0"])
 
-# # Plot the second subplot
-# axs[1].contourf(
-#     twod_grid[0].cpu().numpy(),
-#     twod_grid[1].cpu().numpy(),
-#     np.stack(y_preds).std(axis=0).reshape(n_grid, n_grid).cpu().numpy(),
-#     cmap="bwr",
-#     alpha=0.5,
-# )
-# scatter2 = axs[1].scatter(
-#     X_test[:, 0].cpu().numpy(),
-#     X_test[:, 1].cpu().numpy(),
-#     c=y_test.cpu().numpy(),
-#     cmap="bwr",
-#     alpha=0.5,
-# )
-# axs[1].set_xlabel("Feature 1")
-# axs[1].set_ylabel("Feature 2")
-# axs[1].set_title("Gaussian Processes: Variance/Uncertainty value prediction")
-# axs[1].legend(handles=scatter2.legend_elements()[0], labels=["Class 1", "Class 0"])
+# Plot the second subplot
+axs[1].contourf(
+    twod_grid[0].cpu().numpy(),
+    twod_grid[1].cpu().numpy(),
+    np.stack(y_preds).std(axis=0).reshape(n_grid, n_grid).cpu().numpy(),
+    cmap="bwr",
+    alpha=0.5,
+)
+scatter2 = axs[1].scatter(
+    X_test[:, 0].cpu().numpy(),
+    X_test[:, 1].cpu().numpy(),
+    c=y_test.cpu().numpy(),
+    cmap="bwr",
+    alpha=0.5,
+)
+axs[1].set_xlabel("Feature 1")
+axs[1].set_ylabel("Feature 2")
+axs[1].set_title("Gaussian Processes: Variance/Uncertainty value prediction")
+axs[1].legend(handles=scatter2.legend_elements()[0], labels=["Class 1", "Class 0"])
 
-# # Display the figure in Streamlit
-# st.subheader("One Figure with Two Subplots:")
-# st.pyplot(fig)
+# Display the figure in Streamlit
+st.subheader("One Figure with Two Subplots:")
+st.pyplot(fig)
