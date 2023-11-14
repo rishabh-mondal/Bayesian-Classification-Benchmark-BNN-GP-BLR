@@ -444,7 +444,7 @@ for i in range(n_samples):
 
 
 st.subheader("Model Evaluation: Gaussian Processes")
-plt.figure(figsize=(6, 5))
+plt.figure(figsize=(4, 4))
 plt.plot(acc, label="Accuracy")
 plt.grid()
 plt.xlabel("Iteration number")
@@ -481,7 +481,7 @@ axs[0].legend(handles=scatter1.legend_elements()[0], labels=["Class 1", "Class 0
 axs[1].contourf(
     twod_grid[0].cpu().numpy(),
     twod_grid[1].cpu().numpy(),
-    np.stack(y_preds).std(axis=0).reshape(n_grid, n_grid).cpu().numpy(),
+    np.stack(y_preds).std(axis=0).reshape(n_grid, n_grid),
     cmap="bwr",
     alpha=0.5,
 )
