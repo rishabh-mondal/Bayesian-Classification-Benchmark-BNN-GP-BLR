@@ -22,14 +22,14 @@ def generate_make_moons(seed):
     return X_train, X_test, y_train, y_test
 
 
-st.title("Make Moons Dataset Visualization with Different Seed")
+st.title("Genaerate Make Moons Dataset with different seeds")
 
 seed = st.slider("Select Seed:", min_value=0, max_value=100, value=43)
 
 X_train, X_test, y_train, y_test = generate_make_moons(seed)
 
 
-st.subheader("Visualization:")
+# st.subheader("Visualization:")
 fig, ax = plt.subplots()
 scatter = ax.scatter(X_train[:, 0], X_train[:, 1], c=y_train, alpha=0.7)
 ax.set_title("Make Moons Dataset")
@@ -213,96 +213,270 @@ y_test = torch.tensor(y_test, dtype=torch.float).reshape((-1, 1))
 # # st.subheader("One Figure with Two Subplots:")
 # st.pyplot(fig)
 
+st.subheader("Bayesian Logistic Regression using Hamiltorch")
+class Net(nn.Module):
 
-n_samples = 5
+    def __init__(self, layer_sizes, loss = 'multi_class', bias=True):
+        super(Net, self).__init__()
+        self.layer_sizes = layer_sizes
+        self.layer_list = []
+        self.loss = loss
+        self.bias = bias
+        self.l1 = nn.Linear(layer_sizes[0], layer_sizes[1],bias = self.bias)
 
+    def forward(self, x):
+        x = self.l1(x)
+
+        return x
+
+layer_sizes = [2,2]
+net = Net(layer_sizes)
+    
+
+print(net)
+## Set hyperparameters for network
+
+tau_list = []
+tau = 1.#/100. # iris 1/10
+for w in net.parameters():
+    tau_list.append(tau)
+tau_list = torch.tensor(tau_list)
+
+params_init = hamiltorch.util.flatten(net)
+
+step_size = 0.1 
+num_samples = 1000
+L = 20
+tau_out = 1.
+
+params_hmc = hamiltorch.sample_model(net, X_train, y_train, params_init=params_init, num_samples=num_samples,
+                               step_size=step_size, num_steps_per_sample=L,tau_out=tau_out,tau_list=tau_list)
+
+pred_list, log_prob_list = hamiltorch.predict_model(net, x=X_test, y=y_test, samples=params_hmc[:], model_loss='multi_class_linear_output', tau_out=1., tau_list=tau_list)
+_, pred = torch.max(pred_list, 2)
+acc = torch.zeros( len(pred_list)-1)
+nll = torch.zeros( len(pred_list)-1)
+ensemble_proba = F.softmax(pred_list[0], dim=-1)
+
+mcce = MulticlassCalibrationError(num_classes=2, n_bins=2)#, norm='l2')
+
+for s in range(1,len(pred_list)):
+    _, pred = torch.max(pred_list[:s].mean(0), -1)
+    acc[s-1] = (pred.float() == y_test.flatten()).sum().float()/y_test.shape[0]
+    
+    ensemble_proba += F.softmax(pred_list[s], dim=-1)
+#     print(ensemble_proba.cpu()/(s+1),y_test[:].long().cpu().flatten())
+    
+    out_calibration_error = mcce(ensemble_proba.cpu()/(s+1), y_test[:].long().cpu().flatten())
+    print(out_calibration_error)
+    
+    nll[s-1] = F.nll_loss(torch.log(ensemble_proba.cpu()/(s+1)), y_test[:].long().cpu().flatten(), reduction='mean')
+
+fig, axs = plt.subplots(1, 2, figsize=(15, 6))
+
+# Plot the first subplot (Accuracy)
+
+axs[0].plot(acc, label="Accuracy")
+axs[0].grid()
+axs[0].set_xlabel('Iteration number')
+axs[0].set_ylabel('Sample accuracy')
+axs[0].tick_params(labelsize=15)
+axs[0].legend()
+
+# Plot the second subplot (Negative Log Likelihood)
+
+axs[1].plot(nll, label="Loss")
+axs[1].grid()
+axs[1].set_xlabel('Iteration number')
+axs[1].set_ylabel('Negative Log Likelihood')
+axs[1].tick_params(labelsize=15)
+axs[1].legend()
+
+# Adjust layout
+fig.tight_layout()
+
+# Display the figure in Streamlit
+st.subheader("Accuracy and Negative Log Likelihood Plot: Bayesian Logistic Regression")
+st.pyplot(fig)
+
+# Get posterior predictive over the 2D grid
+posterior_samples = params_hmc#.detach()
+# Consider burning the first 100 samples
+posterior_samples = posterior_samples#[1000:]
+y_preds = []
 n_grid = 200
 lims = 4
-tot_itr = 6
-twod_grid = torch.tensor(
-    np.meshgrid(np.linspace(-lims, lims, n_grid), np.linspace(-lims, lims, n_grid))
-).float()
-y_preds = []
-acc = []
-acc = torch.zeros(int((tot_itr)))
+twod_grid = torch.tensor(np.meshgrid(np.linspace(-lims, lims, n_grid), np.linspace(-lims, lims, n_grid))).float().to(device)
+with torch.no_grad():
+    for theta in posterior_samples:
+        params_list = hamiltorch.util.unflatten(net, theta)
+        params = net.state_dict()
+        for i, (name, _) in enumerate(params.items()):
+            params[name] = params_list[i]
+        y_pred = torch.func.functional_call(net, params, twod_grid.view(2, -1).T).squeeze()
 
-for i in range(n_samples):
-    m = GPy.models.GPClassification(X_train.detach().numpy(), y_train.detach().numpy())
-    out_pred = m.predict(X_test.cpu().numpy())
-    pred = out_pred[0].flatten() > 0.5
-    acc[0] = (torch.tensor(pred) == y_test.flatten()).sum().float() / y_test.shape[0]
-    for itr in range(1, tot_itr):
-        m.optimize(
-            "bfgs", max_iters=10
-        )  # first runs EP and then optimizes the kernel parameters
-        print("iteration:", itr)
-        print(m)
-        print("")
-        out_pred = m.predict(X_test.cpu().numpy())
-        pred = out_pred[0].flatten() > 0.5
-        acc[itr] = (
-            torch.tensor(pred) == y_test.flatten()
-        ).sum().float() / y_test.shape[0]
+        y_preds.append(y_pred[:,0])
 
-    simY, simMse = m.predict(
-        twod_grid.view(2, -1).T.detach().numpy()
-    )  # (twod_grid.view(2, -1).T)
-    y_preds.append(simY)
+logits = torch.stack(y_preds).mean(axis=0).reshape(n_grid, n_grid)
+probs = torch.sigmoid(logits)
 
-plt.figure(figsize=(10, 5))
-plt.plot(acc, label="Accuracy")
-plt.grid()
-plt.xlabel("Iteration number")
-plt.ylabel("Sample accuracy")
-plt.tick_params(labelsize=15)
-plt.legend()
-st.pyplot(plt)
-
-probs = 1 - np.stack(y_preds).mean(axis=0).reshape(n_grid, n_grid)
-
-
-fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+# Create one figure with two subplots
+fig, axs = plt.subplots(1, 2, figsize=(15, 6))
 
 # Plot the first subplot
 axs[0].contourf(
     twod_grid[0].cpu().numpy(),
     twod_grid[1].cpu().numpy(),
     probs.cpu().numpy(),
-    cmap="bwr",
+    cmap='bwr',
     alpha=0.5,
 )
 scatter1 = axs[0].scatter(
     X_test[:, 0].cpu().numpy(),
     X_test[:, 1].cpu().numpy(),
     c=y_test.cpu().numpy(),
-    cmap="bwr",
+    cmap='bwr',
     alpha=0.5,
 )
 axs[0].set_xlabel("Feature 1")
 axs[0].set_ylabel("Feature 2")
-axs[0].set_title("Gaussian Processes: Mean value prediction")
-axs[0].legend(handles=scatter1.legend_elements()[0], labels=["Class 1", "Class 0"])
+axs[0].set_title("Bayesian Logistic Regression: Mean value prediction")
+axs[0].legend(handles=scatter1.legend_elements()[0], labels=['Class 1', 'Class 0'])
 
 # Plot the second subplot
 axs[1].contourf(
     twod_grid[0].cpu().numpy(),
     twod_grid[1].cpu().numpy(),
-    np.stack(y_preds).std(axis=0).reshape(n_grid, n_grid).cpu().numpy(),
-    cmap="bwr",
+    torch.stack(y_preds).std(axis=0).reshape(n_grid, n_grid).cpu().numpy(),
+    cmap='bwr',
     alpha=0.5,
 )
 scatter2 = axs[1].scatter(
     X_test[:, 0].cpu().numpy(),
     X_test[:, 1].cpu().numpy(),
     c=y_test.cpu().numpy(),
-    cmap="bwr",
+    cmap='bwr',
     alpha=0.5,
 )
 axs[1].set_xlabel("Feature 1")
 axs[1].set_ylabel("Feature 2")
-axs[1].set_title("Gaussian Processes: Variance/Uncertainty value prediction")
-axs[1].legend(handles=scatter2.legend_elements()[0], labels=["Class 1", "Class 0"])
+axs[1].set_title("Bayesian Logistic Regression: Variance/Uncertainty in prediction")
+axs[1].legend(handles=scatter2.legend_elements()[0], labels=['Class 1', 'Class 0'])
+
+# Adjust layout
+fig.tight_layout()
 
 # Display the figure in Streamlit
-st.subheader("One Figure with Two Subplots:")
+st.subheader("Mean and Variance/Uncertainty Plot: Bayesian Logistic Regression")
 st.pyplot(fig)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# n_samples = 5
+
+# n_grid = 200
+# lims = 4
+# tot_itr = 6
+# twod_grid = torch.tensor(
+#     np.meshgrid(np.linspace(-lims, lims, n_grid), np.linspace(-lims, lims, n_grid))
+# ).float()
+# y_preds = []
+# acc = []
+# acc = torch.zeros(int((tot_itr)))
+
+# for i in range(n_samples):
+#     m = GPy.models.GPClassification(X_train.detach().numpy(), y_train.detach().numpy())
+#     out_pred = m.predict(X_test.cpu().numpy())
+#     pred = out_pred[0].flatten() > 0.5
+#     acc[0] = (torch.tensor(pred) == y_test.flatten()).sum().float() / y_test.shape[0]
+#     for itr in range(1, tot_itr):
+#         m.optimize(
+#             "bfgs", max_iters=10
+#         )  # first runs EP and then optimizes the kernel parameters
+#         print("iteration:", itr)
+#         print(m)
+#         print("")
+#         out_pred = m.predict(X_test.cpu().numpy())
+#         pred = out_pred[0].flatten() > 0.5
+#         acc[itr] = (
+#             torch.tensor(pred) == y_test.flatten()
+#         ).sum().float() / y_test.shape[0]
+
+#     simY, simMse = m.predict(
+#         twod_grid.view(2, -1).T.detach().numpy()
+#     )  # (twod_grid.view(2, -1).T)
+#     y_preds.append(simY)
+
+# plt.figure(figsize=(10, 5))
+# plt.plot(acc, label="Accuracy")
+# plt.grid()
+# plt.xlabel("Iteration number")
+# plt.ylabel("Sample accuracy")
+# plt.tick_params(labelsize=15)
+# plt.legend()
+# st.pyplot(plt)
+
+# probs = 1 - np.stack(y_preds).mean(axis=0).reshape(n_grid, n_grid)
+
+
+# fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+
+# # Plot the first subplot
+# axs[0].contourf(
+#     twod_grid[0].cpu().numpy(),
+#     twod_grid[1].cpu().numpy(),
+#     probs.cpu().numpy(),
+#     cmap="bwr",
+#     alpha=0.5,
+# )
+# scatter1 = axs[0].scatter(
+#     X_test[:, 0].cpu().numpy(),
+#     X_test[:, 1].cpu().numpy(),
+#     c=y_test.cpu().numpy(),
+#     cmap="bwr",
+#     alpha=0.5,
+# )
+# axs[0].set_xlabel("Feature 1")
+# axs[0].set_ylabel("Feature 2")
+# axs[0].set_title("Gaussian Processes: Mean value prediction")
+# axs[0].legend(handles=scatter1.legend_elements()[0], labels=["Class 1", "Class 0"])
+
+# # Plot the second subplot
+# axs[1].contourf(
+#     twod_grid[0].cpu().numpy(),
+#     twod_grid[1].cpu().numpy(),
+#     np.stack(y_preds).std(axis=0).reshape(n_grid, n_grid).cpu().numpy(),
+#     cmap="bwr",
+#     alpha=0.5,
+# )
+# scatter2 = axs[1].scatter(
+#     X_test[:, 0].cpu().numpy(),
+#     X_test[:, 1].cpu().numpy(),
+#     c=y_test.cpu().numpy(),
+#     cmap="bwr",
+#     alpha=0.5,
+# )
+# axs[1].set_xlabel("Feature 1")
+# axs[1].set_ylabel("Feature 2")
+# axs[1].set_title("Gaussian Processes: Variance/Uncertainty value prediction")
+# axs[1].legend(handles=scatter2.legend_elements()[0], labels=["Class 1", "Class 0"])
+
+# # Display the figure in Streamlit
+# st.subheader("One Figure with Two Subplots:")
+# st.pyplot(fig)
+
