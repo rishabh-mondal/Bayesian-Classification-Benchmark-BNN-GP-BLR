@@ -1,0 +1,11 @@
+numpy
+hamiltorch
+pandas
+scikit-learn
+matplotlib
+streamlit
+torch
+pandas
+torchmetrics
+
+
