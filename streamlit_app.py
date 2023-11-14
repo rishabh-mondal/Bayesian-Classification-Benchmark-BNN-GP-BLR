@@ -224,7 +224,6 @@ twod_grid = (
         np.meshgrid(np.linspace(-lims, lims, n_grid), np.linspace(-lims, lims, n_grid))
     )
     .float()
-    .to(device)
 )
 y_preds = []
 acc = []
