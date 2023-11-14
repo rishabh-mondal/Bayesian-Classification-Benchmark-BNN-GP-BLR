@@ -219,12 +219,9 @@ n_samples = 5
 n_grid = 200
 lims = 4
 tot_itr = 6
-twod_grid = (
-    torch.tensor(
-        np.meshgrid(np.linspace(-lims, lims, n_grid), np.linspace(-lims, lims, n_grid))
-    )
-    .float()
-)
+twod_grid = torch.tensor(
+    np.meshgrid(np.linspace(-lims, lims, n_grid), np.linspace(-lims, lims, n_grid))
+).float()
 y_preds = []
 acc = []
 acc = torch.zeros(int((tot_itr)))
@@ -261,15 +258,51 @@ plt.tick_params(labelsize=15)
 plt.legend()
 st.pyplot(plt)
 
-probs = 1-np.stack(y_preds).mean(axis=0).reshape(n_grid, n_grid)
+probs = 1 - np.stack(y_preds).mean(axis=0).reshape(n_grid, n_grid)
 
-plt.figure()
-plt.contourf(twod_grid[0].cpu().numpy(), twod_grid[1].cpu().numpy(), probs, cmap='bwr', alpha=0.5)
-plt.colorbar()
-scatter = plt.scatter(X_test[:, 0].cpu().numpy(), X_test[:, 1].cpu().numpy(), 
-                      c=y_test.cpu().numpy(), cmap='bwr', alpha=0.5)
-plt.xlabel("Feature 1")
-plt.ylabel("Feature 2")
-plt.title("Gaussian Processes: Mean value prediction")
-plt.legend(handles=scatter.legend_elements()[0], labels=['Class 1', 'Class 0'])
-plt.show()
+
+fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+
+# Plot the first subplot
+axs[0].contourf(
+    twod_grid[0].cpu().numpy(),
+    twod_grid[1].cpu().numpy(),
+    probs.cpu().numpy(),
+    cmap="bwr",
+    alpha=0.5,
+)
+scatter1 = axs[0].scatter(
+    X_test[:, 0].cpu().numpy(),
+    X_test[:, 1].cpu().numpy(),
+    c=y_test.cpu().numpy(),
+    cmap="bwr",
+    alpha=0.5,
+)
+axs[0].set_xlabel("Feature 1")
+axs[0].set_ylabel("Feature 2")
+axs[0].set_title("Gaussian Processes: Mean value prediction")
+axs[0].legend(handles=scatter1.legend_elements()[0], labels=["Class 1", "Class 0"])
+
+# Plot the second subplot
+axs[1].contourf(
+    twod_grid[0].cpu().numpy(),
+    twod_grid[1].cpu().numpy(),
+    np.stack(y_preds).std(axis=0).reshape(n_grid, n_grid).cpu().numpy(),
+    cmap="bwr",
+    alpha=0.5,
+)
+scatter2 = axs[1].scatter(
+    X_test[:, 0].cpu().numpy(),
+    X_test[:, 1].cpu().numpy(),
+    c=y_test.cpu().numpy(),
+    cmap="bwr",
+    alpha=0.5,
+)
+axs[1].set_xlabel("Feature 1")
+axs[1].set_ylabel("Feature 2")
+axs[1].set_title("Gaussian Processes: Variance/Uncertainty value prediction")
+axs[1].legend(handles=scatter2.legend_elements()[0], labels=["Class 1", "Class 0"])
+
+# Display the figure in Streamlit
+st.subheader("One Figure with Two Subplots:")
+st.pyplot(fig)
