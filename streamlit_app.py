@@ -13,6 +13,8 @@ from torchmetrics.classification import MulticlassCalibrationError
 from sklearn.metrics import accuracy_score
 import GPy
 
+st.header("Bayesian Deep Learning for Classification")
+
 
 def generate_make_moons(seed):
     X, y = make_moons(n_samples=1000, noise=0.3, random_state=seed)
@@ -127,7 +129,7 @@ for s in range(1, len(params_hmc)):
         reduction="mean",
     )
 
-
+st.subheader("Bayesian Neural Network using Hamiltorch")
 # Create separate plots for accuracy and negative log likelihood
 fig, (ax_acc, ax_nll) = plt.subplots(1, 2, figsize=(12, 5))
 
@@ -144,10 +146,10 @@ ax_nll.set_xlabel("Number of Samples")
 ax_nll.set_ylabel("NLL")
 
 fig.tight_layout()
-st.subheader("Model Evaluation:")
+st.subheader("Model Evaluation: Baysian Neural Network")
 st.pyplot(fig)
 
-st.subheader("Bayesian Neural Network using Hamiltorch")
+
 posterior_samples = params_hmc  # .detach()
 # Consider burning the first 100 samples
 posterior_samples = posterior_samples  # [1000:]
@@ -190,7 +192,7 @@ axs[0].scatter(
     cmap="bwr",
     alpha=0.5,
 )
-axs[0].set_title("Figure 1")
+axs[0].set_title("Bayesian Neural Network: Mean value prediction")
 
 # Plot the second subplot
 axs[1].contourf(
@@ -207,7 +209,7 @@ axs[1].scatter(
     cmap="bwr",
     alpha=0.5,
 )
-axs[1].set_title("Figure 2")
+axs[1].set_title("Bayesian Neural Network: Variance/Uncertainty in prediction")
 
 # Display the figure in Streamlit
 # st.subheader("One Figure with Two Subplots:")
@@ -324,7 +326,7 @@ axs[1].legend()
 fig.tight_layout()
 
 # Display the figure in Streamlit
-st.subheader("Accuracy and Negative Log Likelihood Plot: Bayesian Logistic Regression")
+st.subheader("Model Evaluation: Bayesian Logistic Regression")
 st.pyplot(fig)
 
 # Get posterior predictive over the 2D grid
@@ -403,6 +405,8 @@ st.subheader("Mean and Variance/Uncertainty Plot: Bayesian Logistic Regression")
 st.pyplot(fig)
 
 
+st.subheader("Gaussian Processes using GPy")
+
 n_samples = 3
 
 n_grid = 200
@@ -438,7 +442,9 @@ for i in range(n_samples):
     )  # (twod_grid.view(2, -1).T)
     y_preds.append(simY)
 
-plt.figure(figsize=(10, 5))
+
+st.subheader("Model Evaluation: Gaussian Processes")
+plt.figure(figsize=(6, 5))
 plt.plot(acc, label="Accuracy")
 plt.grid()
 plt.xlabel("Iteration number")
@@ -449,14 +455,13 @@ st.pyplot(plt)
 
 probs = 1 - np.stack(y_preds).mean(axis=0).reshape(n_grid, n_grid)
 
+st.subheader("Mean and Variance/Uncertainty Plot: Gaussian Processes")
 
-fig, axs = plt.subplots(1, 2, figsize=(12, 6))
-
-# Plot the first subplot
+fig, axs = plt.subplots(1, 2, figsize=(10, 6))
 axs[0].contourf(
     twod_grid[0].cpu().numpy(),
     twod_grid[1].cpu().numpy(),
-    probs.cpu().numpy(),
+    probs,
     cmap="bwr",
     alpha=0.5,
 )
@@ -493,5 +498,4 @@ axs[1].set_title("Gaussian Processes: Variance/Uncertainty value prediction")
 axs[1].legend(handles=scatter2.legend_elements()[0], labels=["Class 1", "Class 0"])
 
 # Display the figure in Streamlit
-st.subheader("One Figure with Two Subplots:")
 st.pyplot(fig)
