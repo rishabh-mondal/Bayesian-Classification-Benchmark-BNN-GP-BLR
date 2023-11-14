@@ -26,22 +26,22 @@ st.title("Make Moons Dataset Visualization with Different Seed")
 
 seed = st.slider("Select Seed:", min_value=0, max_value=100, value=43)
 
-X_train1, X_test1, y_train1, y_test1 = generate_make_moons(seed)
+X_train, X_test, y_train, y_test = generate_make_moons(seed)
 
 
 st.subheader("Visualization:")
 fig, ax = plt.subplots()
-scatter = ax.scatter(X_train1[:, 0], X_train1[:, 1], c=y_train1, alpha=0.7)
+scatter = ax.scatter(X_train[:, 0], X_train[:, 1], c=y_train, alpha=0.7)
 ax.set_title("Make Moons Dataset")
 ax.set_xlabel("Feature 1")
 ax.set_ylabel("Feature 2")
 ax.legend(*scatter.legend_elements(), loc="lower right", title="Classes")
 st.pyplot(fig)
 
-X_train = torch.tensor(X_train1, dtype=torch.float)
-y_train = torch.tensor(y_train1, dtype=torch.float).reshape((-1, 1))
-X_test = torch.tensor(X_test1, dtype=torch.float)
-y_test = torch.tensor(y_test1, dtype=torch.float).reshape((-1, 1))
+X_train = torch.tensor(X_train, dtype=torch.float)
+y_train = torch.tensor(y_train, dtype=torch.float).reshape((-1, 1))
+X_test = torch.tensor(X_test, dtype=torch.float)
+y_test = torch.tensor(y_test, dtype=torch.float).reshape((-1, 1))
 
 
 # class Net(nn.Module):
@@ -219,18 +219,21 @@ n_samples = 5
 n_grid = 200
 lims = 4
 tot_itr = 6
-twod_grid = torch.tensor(
-    np.meshgrid(np.linspace(-lims, lims, n_grid), np.linspace(-lims, lims, n_grid))
-).float()
+twod_grid = (
+    torch.tensor(
+        np.meshgrid(np.linspace(-lims, lims, n_grid), np.linspace(-lims, lims, n_grid))
+    )
+    .float()
+)
 y_preds = []
 acc = []
 acc = torch.zeros(int((tot_itr)))
 
 for i in range(n_samples):
-    m = GPy.models.GPClassification(X_train1, y_train1)
-    out_pred = m.predict(X_test1)
+    m = GPy.models.GPClassification(X_train.detach().numpy(), y_train.detach().numpy())
+    out_pred = m.predict(X_test.cpu().numpy())
     pred = out_pred[0].flatten() > 0.5
-    acc[0] = (torch.tensor(pred) == y_test1.flatten()).sum().float() / y_test1.shape[0]
+    acc[0] = (torch.tensor(pred) == y_test.flatten()).sum().float() / y_test.shape[0]
     for itr in range(1, tot_itr):
         m.optimize(
             "bfgs", max_iters=10
@@ -238,13 +241,15 @@ for i in range(n_samples):
         print("iteration:", itr)
         print(m)
         print("")
-        out_pred = m.predict(X_test1)
+        out_pred = m.predict(X_test.cpu().numpy())
         pred = out_pred[0].flatten() > 0.5
         acc[itr] = (
-            torch.tensor(pred) == y_test1.flatten()
-        ).sum().float() / y_test1.shape[0]
+            torch.tensor(pred) == y_test.flatten()
+        ).sum().float() / y_test.shape[0]
 
-    simY, simMse = m.predict(twod_grid.view(2, -1).T)  # (twod_grid.view(2, -1).T)
+    simY, simMse = m.predict(
+        twod_grid.view(2, -1).T.detach().numpy()
+    )  # (twod_grid.view(2, -1).T)
     y_preds.append(simY)
 
 plt.figure(figsize=(10, 5))
@@ -256,30 +261,15 @@ plt.tick_params(labelsize=15)
 plt.legend()
 st.pyplot(plt)
 
-probs = 1 - np.stack(y_preds).mean(axis=0).reshape(n_grid, n_grid)
+probs = 1-np.stack(y_preds).mean(axis=0).reshape(n_grid, n_grid)
 
 plt.figure()
-plt.contourf(twod_grid[0], twod_grid[1], probs, cmap="bwr", alpha=0.5)
+plt.contourf(twod_grid[0].cpu().numpy(), twod_grid[1].cpu().numpy(), probs, cmap='bwr', alpha=0.5)
 plt.colorbar()
-scatter = plt.scatter(X_test1[:, 0], X_test1[:, 1], c=y_test1, cmap="bwr", alpha=0.5)
+scatter = plt.scatter(X_test[:, 0].cpu().numpy(), X_test[:, 1].cpu().numpy(), 
+                      c=y_test.cpu().numpy(), cmap='bwr', alpha=0.5)
 plt.xlabel("Feature 1")
 plt.ylabel("Feature 2")
 plt.title("Gaussian Processes: Mean value prediction")
-plt.legend(handles=scatter.legend_elements()[0], labels=["Class 1", "Class 0"])
-plt.show()
-
-plt.figure()
-plt.contourf(
-    twod_grid[0],
-    twod_grid[1],
-    np.stack(y_preds).std(axis=0).reshape(n_grid, n_grid),
-    cmap="bwr",
-    alpha=0.5,
-)
-scatter = plt.scatter(X_test1[:, 0], X_test1[:, 1], c=y_test1, cmap="bwr", alpha=0.5)
-plt.colorbar()
-plt.xlabel("Feature 1")
-plt.ylabel("Feature 2")
-plt.title("Gaussian Processes: Variance/Uncertainty value prediction")
-plt.legend(handles=scatter.legend_elements()[0], labels=["Class 1", "Class 0"])
+plt.legend(handles=scatter.legend_elements()[0], labels=['Class 1', 'Class 0'])
 plt.show()
