@@ -129,7 +129,6 @@ for s in range(1, len(params_hmc)):
         reduction="mean",
     )
 
-
 show_convergence = st.checkbox("Show Convergence", value=False)
 
 fig, (ax_acc, ax_nll) = plt.subplots(1, 2, figsize=(12, 5))
@@ -140,18 +139,17 @@ ax_acc.set_title("Accuracy")
 ax_acc.set_xlabel("Number of Samples")
 ax_acc.set_ylabel("Accuracy")
 
-# Plot Negative Log Likelihood
-ax_nll.plot(nll)
-ax_nll.set_title("Negative Log Likelihood")
-ax_nll.set_xlabel("Number of Samples")
-ax_nll.set_ylabel("NLL")
-
-fig.tight_layout()
-
-if not show_convergence:
+# Plot Negative Log Likelihood only if the checkbox is selected
+if show_convergence:
+    ax_nll.plot(nll)
+    ax_nll.set_title("Negative Log Likelihood")
+    ax_nll.set_xlabel("Number of Samples")
+    ax_nll.set_ylabel("NLL")
+else:
     # If not checked, remove the convergence plot
     fig.delaxes(ax_nll)
     fig.tight_layout()
+
 st.subheader("Model Evaluation: Bayesian Neural Network")
 st.pyplot(fig)
 
@@ -181,46 +179,60 @@ logits = torch.stack(y_preds).mean(axis=0).reshape(n_grid, n_grid)
 probs = torch.sigmoid(logits)
 
 
-fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+# Create one figure with two subplots
+fig, axs = plt.subplots(1, 2, figsize=(15, 6))
 
-# Plot the first subplot
-axs[0].contourf(
+# Plot the first subplot (Mean value prediction)
+contour1 = axs[0].contourf(
     twod_grid[0].cpu().numpy(),
     twod_grid[1].cpu().numpy(),
     probs.cpu().numpy(),
     cmap="bwr",
     alpha=0.5,
 )
-axs[0].colorbar()
-axs[0].scatter(
+# Add colorbar to the first subplot
+colorbar1 = fig.colorbar(contour1, ax=axs[0])
+
+scatter1 = axs[0].scatter(
     X_test[:, 0].cpu().numpy(),
     X_test[:, 1].cpu().numpy(),
     c=y_test.cpu().numpy(),
     cmap="bwr",
     alpha=0.5,
 )
-axs[0].set_title("Bayesian Neural Network: Mean value prediction")
+axs[0].set_xlabel("Feature 1")
+axs[0].set_ylabel("Feature 2")
+axs[0].set_title("Bayesian Logistic Regression: Mean value prediction")
+axs[0].legend(handles=scatter1.legend_elements()[0], labels=["Class 1", "Class 0"])
 
-# Plot the second subplot
-axs[1].contourf(
+# Plot the second subplot (Variance/Uncertainty in prediction)
+contour2 = axs[1].contourf(
     twod_grid[0].cpu().numpy(),
     twod_grid[1].cpu().numpy(),
     torch.stack(y_preds).std(axis=0).reshape(n_grid, n_grid).cpu().numpy(),
     cmap="bwr",
     alpha=0.5,
 )
-axs[1].colorbar()
-axs[1].scatter(
+# Add colorbar to the second subplot
+colorbar2 = fig.colorbar(contour2, ax=axs[1])
+
+scatter2 = axs[1].scatter(
     X_test[:, 0].cpu().numpy(),
     X_test[:, 1].cpu().numpy(),
     c=y_test.cpu().numpy(),
     cmap="bwr",
     alpha=0.5,
 )
-axs[1].set_title("Bayesian Neural Network: Variance/Uncertainty in prediction")
+axs[1].set_xlabel("Feature 1")
+axs[1].set_ylabel("Feature 2")
+axs[1].set_title("Bayesian Logistic Regression: Variance/Uncertainty in prediction")
+axs[1].legend(handles=scatter2.legend_elements()[0], labels=["Class 1", "Class 0"])
+
+# Adjust layout
+fig.tight_layout()
 
 # Display the figure in Streamlit
-# st.subheader("One Figure with Two Subplots:")
+st.subheader("Mean and Variance/Uncertainty Plot: Bayesian Logistic Regression")
 st.pyplot(fig)
 
 
@@ -323,23 +335,20 @@ axs[0].set_ylabel("Sample accuracy")
 axs[0].tick_params(labelsize=15)
 axs[0].legend()
 
-# Plot the second subplot (Negative Log Likelihood)
-axs[1].plot(nll, label="Loss")
-axs[1].grid()
-axs[1].set_xlabel("Iteration number")
-axs[1].set_ylabel("Negative Log Likelihood")
-axs[1].tick_params(labelsize=15)
-axs[1].legend()
-
-# Adjust layout
-fig.tight_layout()
-
-# Disable convergence plot if the checkbox is not selected
-if not show_convergence:
+# Plot the second subplot (Negative Log Likelihood) only if the checkbox is selected
+if show_convergence:
+    axs[1].plot(nll, label="Loss")
+    axs[1].grid()
+    axs[1].set_xlabel("Iteration number")
+    axs[1].set_ylabel("Negative Log Likelihood")
+    axs[1].tick_params(labelsize=15)
+    axs[1].legend()
+else:
+    # If not checked, remove the convergence plot
     fig.delaxes(axs[1])
     fig.tight_layout()
 
-st.subheader("Model Evaluation: Bayesian Logistic Regression")
+# Display the figure in Streamlit
 st.pyplot(fig)
 
 
@@ -369,17 +378,20 @@ logits = torch.stack(y_preds).mean(axis=0).reshape(n_grid, n_grid)
 probs = torch.sigmoid(logits)
 
 # Create one figure with two subplots
+# Create one figure with two subplots
 fig, axs = plt.subplots(1, 2, figsize=(15, 6))
 
-# Plot the first subplot
-axs[0].contourf(
+# Plot the first subplot (Mean value prediction)
+contour1 = axs[0].contourf(
     twod_grid[0].cpu().numpy(),
     twod_grid[1].cpu().numpy(),
     probs.cpu().numpy(),
     cmap="bwr",
     alpha=0.5,
 )
-axs[0].colorbar()
+# Add colorbar to the first subplot
+colorbar1 = fig.colorbar(contour1, ax=axs[0])
+
 scatter1 = axs[0].scatter(
     X_test[:, 0].cpu().numpy(),
     X_test[:, 1].cpu().numpy(),
@@ -392,15 +404,17 @@ axs[0].set_ylabel("Feature 2")
 axs[0].set_title("Bayesian Logistic Regression: Mean value prediction")
 axs[0].legend(handles=scatter1.legend_elements()[0], labels=["Class 1", "Class 0"])
 
-# Plot the second subplot
-axs[1].contourf(
+# Plot the second subplot (Variance/Uncertainty in prediction)
+contour2 = axs[1].contourf(
     twod_grid[0].cpu().numpy(),
     twod_grid[1].cpu().numpy(),
     torch.stack(y_preds).std(axis=0).reshape(n_grid, n_grid).cpu().numpy(),
     cmap="bwr",
     alpha=0.5,
 )
-axs[1].colorbar()
+# Add colorbar to the second subplot
+colorbar2 = fig.colorbar(contour2, ax=axs[1])
+
 scatter2 = axs[1].scatter(
     X_test[:, 0].cpu().numpy(),
     X_test[:, 1].cpu().numpy(),
@@ -471,8 +485,11 @@ ax.set_xlabel("Iteration number")
 ax.set_ylabel("Sample accuracy")
 ax.tick_params(labelsize=15)
 ax.legend()
+
+# Display the figure in Streamlit
 st.pyplot(fig)
 
+# If the checkbox is not selected, remove the convergence plot
 if not show_convergence:
     fig.delaxes(ax)
     fig.tight_layout()
@@ -481,17 +498,22 @@ if not show_convergence:
 
 probs = 1 - np.stack(y_preds).mean(axis=0).reshape(n_grid, n_grid)
 
+
 st.subheader("Mean and Variance/Uncertainty Plot: Gaussian Processes")
 
 fig, axs = plt.subplots(1, 2, figsize=(10, 6))
-axs[0].contourf(
+
+# Plot the first subplot (Mean value prediction)
+contour1 = axs[0].contourf(
     twod_grid[0].cpu().numpy(),
     twod_grid[1].cpu().numpy(),
     probs,
     cmap="bwr",
     alpha=0.5,
 )
-axs[0].colorbar()
+# Add colorbar to the first subplot
+colorbar1 = fig.colorbar(contour1, ax=axs[0])
+
 scatter1 = axs[0].scatter(
     X_test[:, 0].cpu().numpy(),
     X_test[:, 1].cpu().numpy(),
@@ -504,15 +526,17 @@ axs[0].set_ylabel("Feature 2")
 axs[0].set_title("Gaussian Processes: Mean value prediction")
 axs[0].legend(handles=scatter1.legend_elements()[0], labels=["Class 1", "Class 0"])
 
-# Plot the second subplot
-axs[1].contourf(
+# Plot the second subplot (Variance/Uncertainty value prediction)
+contour2 = axs[1].contourf(
     twod_grid[0].cpu().numpy(),
     twod_grid[1].cpu().numpy(),
     np.stack(y_preds).std(axis=0).reshape(n_grid, n_grid),
     cmap="bwr",
     alpha=0.5,
 )
-axs[1].colorbar()
+# Add colorbar to the second subplot
+colorbar2 = fig.colorbar(contour2, ax=axs[1])
+
 scatter2 = axs[1].scatter(
     X_test[:, 0].cpu().numpy(),
     X_test[:, 1].cpu().numpy(),
