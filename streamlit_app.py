@@ -469,7 +469,7 @@ for i in range(n_samples):
     y_preds.append(simY)
 
 
-show_convergence = st.checkbox("Show Convergence", value=False)
+# show_convergence = st.checkbox("Show Convergence", value=False)
 
 st.subheader("Model Evaluation: Gaussian Processes")
 fig, ax = plt.subplots(figsize=(4, 4))
