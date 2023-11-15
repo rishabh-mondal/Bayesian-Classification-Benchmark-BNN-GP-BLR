@@ -129,8 +129,9 @@ for s in range(1, len(params_hmc)):
         reduction="mean",
     )
 
-st.subheader("Bayesian Neural Network using Hamiltorch")
-# Create separate plots for accuracy and negative log likelihood
+
+show_convergence = st.checkbox("Show Convergence", value=False)
+
 fig, (ax_acc, ax_nll) = plt.subplots(1, 2, figsize=(12, 5))
 
 # Plot Accuracy
@@ -146,7 +147,12 @@ ax_nll.set_xlabel("Number of Samples")
 ax_nll.set_ylabel("NLL")
 
 fig.tight_layout()
-st.subheader("Model Evaluation: Baysian Neural Network")
+
+if not show_convergence:
+    # If not checked, remove the convergence plot
+    fig.delaxes(ax_nll)
+    fig.tight_layout()
+st.subheader("Model Evaluation: Bayesian Neural Network")
 st.pyplot(fig)
 
 
@@ -185,6 +191,7 @@ axs[0].contourf(
     cmap="bwr",
     alpha=0.5,
 )
+axs[0].colorbar()
 axs[0].scatter(
     X_test[:, 0].cpu().numpy(),
     X_test[:, 1].cpu().numpy(),
@@ -202,6 +209,7 @@ axs[1].contourf(
     cmap="bwr",
     alpha=0.5,
 )
+axs[1].colorbar()
 axs[1].scatter(
     X_test[:, 0].cpu().numpy(),
     X_test[:, 1].cpu().numpy(),
@@ -302,10 +310,12 @@ for s in range(1, len(pred_list)):
         reduction="mean",
     )
 
+
+show_convergence = st.checkbox("Show Convergence", value=False)
+
 fig, axs = plt.subplots(1, 2, figsize=(15, 6))
 
 # Plot the first subplot (Accuracy)
-
 axs[0].plot(acc, label="Accuracy")
 axs[0].grid()
 axs[0].set_xlabel("Iteration number")
@@ -314,7 +324,6 @@ axs[0].tick_params(labelsize=15)
 axs[0].legend()
 
 # Plot the second subplot (Negative Log Likelihood)
-
 axs[1].plot(nll, label="Loss")
 axs[1].grid()
 axs[1].set_xlabel("Iteration number")
@@ -325,9 +334,14 @@ axs[1].legend()
 # Adjust layout
 fig.tight_layout()
 
-# Display the figure in Streamlit
+# Disable convergence plot if the checkbox is not selected
+if not show_convergence:
+    fig.delaxes(axs[1])
+    fig.tight_layout()
+
 st.subheader("Model Evaluation: Bayesian Logistic Regression")
 st.pyplot(fig)
+
 
 # Get posterior predictive over the 2D grid
 posterior_samples = params_hmc  # .detach()
@@ -365,6 +379,7 @@ axs[0].contourf(
     cmap="bwr",
     alpha=0.5,
 )
+axs[0].colorbar()
 scatter1 = axs[0].scatter(
     X_test[:, 0].cpu().numpy(),
     X_test[:, 1].cpu().numpy(),
@@ -385,6 +400,7 @@ axs[1].contourf(
     cmap="bwr",
     alpha=0.5,
 )
+axs[1].colorbar()
 scatter2 = axs[1].scatter(
     X_test[:, 0].cpu().numpy(),
     X_test[:, 1].cpu().numpy(),
@@ -443,15 +459,25 @@ for i in range(n_samples):
     y_preds.append(simY)
 
 
+show_convergence = st.checkbox("Show Convergence", value=False)
+
 st.subheader("Model Evaluation: Gaussian Processes")
-plt.figure(figsize=(4, 4))
-plt.plot(acc, label="Accuracy")
-plt.grid()
-plt.xlabel("Iteration number")
-plt.ylabel("Sample accuracy")
-plt.tick_params(labelsize=15)
-plt.legend()
-st.pyplot(plt)
+fig, ax = plt.subplots(figsize=(4, 4))
+
+# Plot the accuracy
+ax.plot(acc, label="Accuracy")
+ax.grid()
+ax.set_xlabel("Iteration number")
+ax.set_ylabel("Sample accuracy")
+ax.tick_params(labelsize=15)
+ax.legend()
+st.pyplot(fig)
+
+if not show_convergence:
+    fig.delaxes(ax)
+    fig.tight_layout()
+    st.pyplot(fig)
+
 
 probs = 1 - np.stack(y_preds).mean(axis=0).reshape(n_grid, n_grid)
 
@@ -465,6 +491,7 @@ axs[0].contourf(
     cmap="bwr",
     alpha=0.5,
 )
+axs[0].colorbar()
 scatter1 = axs[0].scatter(
     X_test[:, 0].cpu().numpy(),
     X_test[:, 1].cpu().numpy(),
@@ -485,6 +512,7 @@ axs[1].contourf(
     cmap="bwr",
     alpha=0.5,
 )
+axs[1].colorbar()
 scatter2 = axs[1].scatter(
     X_test[:, 0].cpu().numpy(),
     X_test[:, 1].cpu().numpy(),
