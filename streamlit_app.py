@@ -323,34 +323,30 @@ for s in range(1, len(pred_list)):
     )
 
 
-show_convergence = st.checkbox("Show Convergence", value=False)
+# Display the figure in Streamlit
+show_convergence = st.checkbox(" BLR : Show Convergence", value=False)
 
-fig, axs = plt.subplots(1, 2, figsize=(15, 6))
+fig, (ax_acc, ax_nll) = plt.subplots(1, 2, figsize=(12, 5))
 
-# Plot the first subplot (Accuracy)
-axs[0].plot(acc, label="Accuracy")
-axs[0].grid()
-axs[0].set_xlabel("Iteration number")
-axs[0].set_ylabel("Sample accuracy")
-axs[0].tick_params(labelsize=15)
-axs[0].legend()
+# Plot Accuracy
+ax_acc.plot(acc)
+ax_acc.set_title("Accuracy")
+ax_acc.set_xlabel("Number of Samples")
+ax_acc.set_ylabel("Accuracy")
 
-# Plot the second subplot (Negative Log Likelihood) only if the checkbox is selected
+# Plot Negative Log Likelihood only if the checkbox is selected
 if show_convergence:
-    axs[1].plot(nll, label="Loss")
-    axs[1].grid()
-    axs[1].set_xlabel("Iteration number")
-    axs[1].set_ylabel("Negative Log Likelihood")
-    axs[1].tick_params(labelsize=15)
-    axs[1].legend()
+    ax_nll.plot(nll)
+    ax_nll.set_title("Negative Log Likelihood")
+    ax_nll.set_xlabel("Number of Samples")
+    ax_nll.set_ylabel("NLL")
 else:
     # If not checked, remove the convergence plot
-    fig.delaxes(axs[1])
+    fig.delaxes(ax_nll)
     fig.tight_layout()
 
-# Display the figure in Streamlit
+st.subheader("Model Evaluation: Bayesian  logistic Regression")
 st.pyplot(fig)
-
 
 # Get posterior predictive over the 2D grid
 posterior_samples = params_hmc  # .detach()
