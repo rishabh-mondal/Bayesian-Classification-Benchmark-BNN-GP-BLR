@@ -485,13 +485,6 @@ ax.legend()
 # Display the figure in Streamlit
 st.pyplot(fig)
 
-# If the checkbox is not selected, remove the convergence plot
-if not show_convergence:
-    fig.delaxes(ax)
-    fig.tight_layout()
-    st.pyplot(fig)
-
-
 probs = 1 - np.stack(y_preds).mean(axis=0).reshape(n_grid, n_grid)
 
 
